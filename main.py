@@ -10,6 +10,7 @@ import time
 import config
 import dedup
 import image_extractor
+import selector
 import summarizer
 import telegram_poster
 from fetcher import fetch_all
@@ -25,14 +26,18 @@ def run() -> None:
     logger.info("شروع اجرای ایجنت خبری هوش مصنوعی.")
     articles = fetch_all()
 
+    # فقط خبرهای جدید (ارسال‌نشده) را نگه دار
+    fresh = [a for a in articles if dedup.is_new(a.link)]
+    logger.info("تعداد %d خبر جدید (ارسال‌نشده) پیدا شد.", len(fresh))
+
+    # کاربردی‌ترین‌ها را اولویت بده (مدل/قابلیت/ابزار/سرویس جدید)
+    ranked = selector.select_useful(fresh)
+
     posted_count = 0
-    for article in articles:
+    for article in ranked:
         if posted_count >= config.MAX_POSTS_PER_RUN:
             logger.info("به سقف %d پست در این اجرا رسیدیم.", config.MAX_POSTS_PER_RUN)
             break
-
-        if not dedup.is_new(article.link):
-            continue
 
         logger.info("در حال پردازش: %s", article.title)
 
