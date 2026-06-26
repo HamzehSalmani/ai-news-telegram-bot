@@ -32,6 +32,25 @@ class Summary:
     bullets: list[str]
 
 
+# حداکثر طول متن منبعی که به مدل می‌فرستیم (کاراکتر).
+# خلاصه‌ی RSS اغلب طولانی و پر از HTML است؛ کوتاه‌کردن آن مصرف توکن ورودی را
+# به‌شدت کم می‌کند بدون افت محسوس در کیفیت خلاصه.
+_MAX_SOURCE_CHARS = 1200
+
+
+def _clean_source_text(text: str) -> str:
+    """حذف تگ‌های HTML و فاصله‌های اضافه، و کوتاه‌کردن متن منبع برای صرفه‌جویی در توکن."""
+    if not text:
+        return ""
+    # حذف تگ‌های HTML
+    cleaned = re.sub(r"<[^>]+>", " ", text)
+    # جمع‌کردن فاصله‌ها و خطوط خالی
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    if len(cleaned) > _MAX_SOURCE_CHARS:
+        cleaned = cleaned[:_MAX_SOURCE_CHARS].rsplit(" ", 1)[0] + " …"
+    return cleaned
+
+
 _client: OpenAI | None = None
 
 
@@ -62,9 +81,10 @@ def _extract_json(text: str) -> dict:
 
 def summarize(title: str, summary_text: str, link: str) -> Summary | None:
     """خبر را خلاصه می‌کند. در صورت خطا None برمی‌گرداند تا اجرای کلی متوقف نشود."""
+    clean_summary = _clean_source_text(summary_text)
     user_content = (
         f"عنوان اصلی خبر: {title}\n\n"
-        f"متن/خلاصه‌ی منبع:\n{summary_text or '(متن کامل در دسترس نیست؛ از عنوان استفاده کن.)'}\n\n"
+        f"متن/خلاصه‌ی منبع:\n{clean_summary or '(متن کامل در دسترس نیست؛ از عنوان استفاده کن.)'}\n\n"
         f"لینک منبع: {link}\n\n"
         "این خبر را طبق دستورالعمل به فارسی خلاصه کن و خروجی JSON را بده. "
         "مجموع کل متن (تیتر + بالت‌ها) باید کوتاه و زیر ۸۰۰ کاراکتر بماند تا در کپشن تلگرام جا شود."
@@ -73,7 +93,7 @@ def summarize(title: str, summary_text: str, link: str) -> Summary | None:
     try:
         response = _get_client().chat.completions.create(
             model=config.OPENROUTER_MODEL,
-            max_tokens=1000,
+            max_tokens=500,
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},
