@@ -1,0 +1,8 @@
+.env
+venv/
+__pycache__/
+*.pyc
+agent.log
+
+# توجه: posted.db عمداً ignore نشده، چون در GitHub Actions
+# باید بین اجراها نگه داشته شود تا خبر تکراری ارسال نشود.
