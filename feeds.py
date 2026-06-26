@@ -9,7 +9,10 @@ RSS_FEEDS = [
     "https://deepmind.google/blog/rss.xml",
     "https://huggingface.co/blog/feed.xml",
     "https://blogs.microsoft.com/ai/feed/",
-    "https://www.anthropic.com/rss.xml",
+    "https://bair.berkeley.edu/blog/feed.xml",
+
+    # رسانه‌های تخصصی خبر هوش مصنوعی
+    "https://www.marktechpost.com/feed/",
 
     # رسانه‌های تکنولوژی (بخش AI)
     "https://techcrunch.com/category/artificial-intelligence/feed/",
