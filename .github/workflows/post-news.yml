@@ -1,0 +1,57 @@
+name: Post AI News to Telegram
+
+on:
+  # اجرای خودکار طبق زمان‌بندی (ساعت‌ها به وقت UTC هستند)
+  # هر ۶ ساعت یک‌بار. ۰۰:۳۰، ۰۶:۳۰، ۱۲:۳۰، ۱۸:۳۰ به وقت UTC
+  schedule:
+    - cron: "30 0,6,12,18 * * *"
+  # امکان اجرای دستی از تب Actions برای تست
+  workflow_dispatch:
+
+# اجازه‌ی نوشتن تا بتوانیم posted.db (دیتابیس ضدتکرار) را برگردانیم
+permissions:
+  contents: write
+
+# جلوگیری از اجرای هم‌زمان دو نسخه
+concurrency:
+  group: post-news
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run agent
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ secrets.OPENROUTER_MODEL }}
+          MAX_POSTS_PER_RUN: ${{ secrets.MAX_POSTS_PER_RUN }}
+          ENABLE_WEB_SEARCH: ${{ secrets.ENABLE_WEB_SEARCH }}
+        run: python main.py
+
+      - name: Persist dedup database
+        if: always()
+        run: |
+          if [ -n "$(git status --porcelain posted.db)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add posted.db
+            git commit -m "chore: update dedup db [skip ci]"
+            git push
+          else
+            echo "no change in posted.db"
+          fi
